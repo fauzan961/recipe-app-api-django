@@ -2,6 +2,7 @@ version: '3.10'
 
 services:
   app:
+    # Defining our first app service
     build:
       context: .
       # Args is given here to install req.dev.txt file only for dev enviroment
@@ -12,4 +13,28 @@ services:
     volumes:
       - ./app:/app
     command: >
-      sh -c "python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py wait_for_db && 
+             python manage.py migrate && 
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      # Creating our environment variables so that we can use it in our django app
+      - DB_HOST=db # Hostname of the database
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASS=changeme
+    depends_on:
+      # It will depend on our db service and wait until the db service starts
+      - db
+
+  db:
+    # Defining our second db service
+    image: postgres:13-alpine
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=devdb # Naming the database
+      - POSTGRES_USER=devuser
+      - POSTGRES_PASSWORD=changeme
+
+volumes:
+  dev-db-data:

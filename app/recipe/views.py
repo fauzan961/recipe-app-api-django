@@ -1,7 +1,9 @@
 """
 Views for the recipe API.
 """
-from rest_framework import (viewsets, mixins)
+from rest_framework import (viewsets, mixins, status)
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
@@ -25,12 +27,26 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Return the serializer class for request."""
         if self.action == 'list':
             return serializers.RecipeSerializer
+        elif self.action == 'upload_image':
+            return serializers.RecipeImageSerializer
         
         return self.serializer_class
     
     def perform_create(self, serializer): # Perform_create method executes just before saving the creation of new record in db.
         """Add user to the existing recipe field"""
         serializer.save(user=self.request.user) # Adding value to the user field and pass the user field for creating new record.
+        
+    @action(methods=['POST'], detail=True, url_path='upload-image')
+    def upload_image(self, request, pk=None):
+        """Upload Image to recipe API."""
+        recipe = self.get_object() # Retrieve the recipe object based on the id of the recipe.
+        serializer = self.get_serializer(recipe, data=request.data) # Runs get_serializer_class and gets the serializer as declared above.
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class BaseRecipeAttrViewSet(mixins.DestroyModelMixin,
                             mixins.UpdateModelMixin,

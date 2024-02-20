@@ -356,7 +356,47 @@ class PrivateRecipeAPITests(TestCase):
         
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.ingredients.count(), 0)
-
+    
+    def test_filter_recipe_by_tags(self):
+        """Test filtering recipes by tags."""
+        recipe_1 = create_recipe(user=self.user, title='Thai Vegetable Curry')
+        recipe_2 = create_recipe(user=self.user, title='Aubergine with Tahini')
+        tag1 = Tag.objects.create(user=self.user, name='Vegan')
+        tag2 = Tag.objects.create(user=self.user, name='Vegetarian')
+        recipe_1.tags.add(tag1)
+        recipe_2.tags.add(tag2)
+        recipe_3 = create_recipe(user=self.user, title='Fish and chips')
+        
+        params = {'tags': f'{tag1.id}, {tag2.id}'}
+        res = self.client.get(RECIPES_URL, params)
+        
+        s1 = RecipeSerializer(recipe_1)
+        s2 = RecipeSerializer(recipe_2)
+        s3 = RecipeSerializer(recipe_3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+        
+    def test_filter_recipe_by_ingredients(self):
+        """Test filtering recipes by ingredients."""
+        recipe_1 = create_recipe(user=self.user, title='Posh Beans on TOast')
+        recipe_2 = create_recipe(user=self.user, title='Chicken Curry')
+        ing_1 = Ingredient.objects.create(user=self.user, name='Cheese')
+        ing_2 = Ingredient.objects.create(user=self.user, name='Chicken')
+        recipe_1.ingredients.add(ing_1)
+        recipe_2.ingredients.add(ing_2)
+        recipe_3 = create_recipe(user=self.user, title='Red Lentil Daal')
+        
+        params = {'ingredients': f'{ing_1.id}, {ing_2.id}'}
+        res = self.client.get(RECIPES_URL, params)
+        
+        s1 = RecipeSerializer(recipe_1)
+        s2 = RecipeSerializer(recipe_2)
+        s3 = RecipeSerializer(recipe_3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+        
 class ImageUploadTests(TestCase):
     """Tests for the image upload API."""
     
@@ -380,7 +420,6 @@ class ImageUploadTests(TestCase):
             res = self.client.post(url, payload, format='multipart')
             
         self.recipe.refresh_from_db()
-        print(res.data)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('image', res.data)
         self.assertTrue(os.path.exists(self.recipe.image.path)) # Check if the path exists.
